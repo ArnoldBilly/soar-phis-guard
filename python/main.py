@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path
+import time
 
 env_path = Path(__file__).parent.parent/'.env'
 load_dotenv(dotenv_path=env_path)
@@ -13,33 +14,32 @@ app = FastAPI(title="PhisGuard Security Engine")
 class PhishingRequest(BaseModel):
     url: str
 
-# @app.get("/")
-# async def main():
-#     user_input = input("Masukkan Link Dulu: ")
-#     app.route("/analyze_url", sus_url: user_input)
+def submit(target_url, api_key):
+    vt_url = "https://www.virustotal.com/api/v3/urls"
+    payload = {"url" : target_url}
+    headers = {
+        "accept": "application/json",
+        "x-apikey": api_key,
+        "content-type": "application/x-www-form-urlencoded"
+    }
+    vt_response = requests.post(vt_url, data=payload, headers=headers)
+    return vt_response.json()['data']['id']
 
-# @app.post("/analyze-url")
-# async def analyze_url(data: PhishingRequest, us):
-#     target_url = 
-#     url = "https://www.virustotal.com/api/v3/urls"
+def get_result(analysis_id, api_key):
+    report_url = f"https://www.virustotal.com/api/v3/analyses/{analysis_id}"
+    headers = {
+        "x-apikey": api_key
+    }
+    response = requests.get(report_url, headers = headers)
+    return response.json()
 
-#     payload = { "url":  user_input}
-#     headers = {
-#         "accept": "application/json",
-#         "x-apikey": api_key,
-#         "content-type": "application/x-www-form-urlencoded"
-#     }
+@app.post("/analyze-url")
+async def analyze_url(request_data: PhishingRequest):
 
-#     response = requests.post(url, data=payload, headers=headers)
-#     result_url = "https://www.virustotal.com/api/v3/analyses/{response.data.id}"
+    analysis_id = submit(request_data.url, api_key)
 
-#     result_headers = {
-#         "accept": "application/json",
-#         "x-apikey": api_key,
-#     }
+    time.sleep(2)
 
-#     response_url = requests.get(result_url, result_headers = headers)
-#     return {
-#         "status": "success",
-#         "data": ""
-#     }
+    final_report = get_result(analysis_id, api_key)
+
+    return final_report
