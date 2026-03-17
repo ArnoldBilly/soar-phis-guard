@@ -31,7 +31,14 @@ def get_result(analysis_id, api_key):
         "x-apikey": api_key
     }
     response = requests.get(report_url, headers = headers)
-    return response.json()
+    return response.json()['data']['attributes']['stats']
+
+def get_status(status):
+    if status['malicious'] > 0 or status['suspicious'] > 0:
+        result = "dangerous"
+        return result
+    
+    return "not dangerous"
 
 @app.post("/analyze-url")
 async def analyze_url(request_data: PhishingRequest):
@@ -40,6 +47,13 @@ async def analyze_url(request_data: PhishingRequest):
 
     time.sleep(2)
 
-    final_report = get_result(analysis_id, api_key)
+    result = get_result(analysis_id, api_key)
 
-    return final_report
+    final_status = get_status(result)
+    return {
+        "url": request_data.url,
+        "status": final_status,
+        "malicious_count": result['malicious'],
+        "suspicious_count": result['suspicious'],
+        "analysis_date": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
